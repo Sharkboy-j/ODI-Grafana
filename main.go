@@ -33,6 +33,22 @@ func main() {
 	writeAPI = client.WriteAPIBlocking(org, bucket)
 	fmt.Println("Influx client started")
 
+	done := make(chan bool, 1)
+
+	go start()
+
+	<-done
+}
+
+func start() {
+	for {
+		login()
+
+		getStat()
+	}
+}
+
+func login() {
 	url := "http://192.168.1.1/boaform/admin/formLogin"
 	method := "POST"
 
@@ -62,13 +78,6 @@ func main() {
 	}
 
 	fmt.Println(string(body))
-
-	done := make(chan bool, 1)
-
-	go getStat()
-
-	<-done
-	fmt.Println(string(body))
 }
 
 func getStat() {
@@ -82,7 +91,18 @@ func getStat() {
 		fmt.Println(err)
 		return
 	}
+
+	req.Header.Add("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:136.0) Gecko/20100101 Firefox/136.0")
+	req.Header.Add("Accept", "application/json")
+	req.Header.Add("Accept-Language", "ru-RU,ru;q=0.8,en-US;q=0.5,en;q=0.3")
+	req.Header.Add("Accept-Encoding", "gzip, deflate")
+	req.Header.Add("DNT", "1")
 	req.Header.Add("Connection", "keep-alive")
+	req.Header.Add("Referer", "http://192.168.1.1/left.html")
+	req.Header.Add("Upgrade-Insecure-Requests", "1")
+	req.Header.Add("Priority", "u=4")
+	req.Header.Add("Pragma", "no-cache")
+	req.Header.Add("Cache-Control", "no-cache")
 
 	for {
 		res, err := rsClient.Do(req)

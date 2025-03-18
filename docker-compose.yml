@@ -1,0 +1,15 @@
+version: "2.1"
+services:
+  odi-grafana:
+    image: odi-grafana
+    container_name: odi-grafana
+    environment:
+      - INFLUX_DBURL=http://10.0.0.196:8086
+      - INFLUX_TOKEN=m37xWgEUfvpMKWAhejVNnH5UABJHq8yaEoxLFqLEDaKbuDnZFncQ0gb7OfENxtggWmGcgEbIcTNHG8kS98Vi1A==
+      - INFLUX_ORG=keenetic
+      - INFLUX_BUCKET=keenetic
+    read_only: false
+    stop_grace_period: 30m
+    network_mode: "host"
+    tty: true
+    restart: unless-stopped

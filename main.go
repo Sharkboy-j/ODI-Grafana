@@ -23,11 +23,40 @@ var (
 )
 
 func main() {
-
 	influxDBURL := os.Getenv("INFLUX_DBURL")
+	if len(influxDBURL) == 0 {
+		panic("INFLUX_DBURL empty")
+	}
+
 	token := os.Getenv("INFLUX_TOKEN")
+	if len(token) == 0 {
+		panic("INFLUX_TOKEN empty")
+	}
+
 	org := os.Getenv("INFLUX_ORG")
+	if len(org) == 0 {
+		panic("INFLUX_ORG empty")
+	}
+
 	bucket := os.Getenv("INFLUX_BUCKET")
+	if len(bucket) == 0 {
+		panic("INFLUX_BUCKET empty")
+	}
+
+	username := os.Getenv("SFP_USERNAME")
+	if len(username) == 0 {
+		panic("SFP_USERNAME empty")
+	}
+
+	password := os.Getenv("SFP_PASSWORD")
+	if len(password) == 0 {
+		panic("SFP_PASSWORD empty")
+	}
+
+	sfpHost := os.Getenv("SFP_HOST")
+	if len(password) == 0 {
+		panic("SFP_HOST empty")
+	}
 
 	client = influxdb2.NewClient(influxDBURL, token)
 	writeAPI = client.WriteAPIBlocking(org, bucket)
@@ -35,24 +64,24 @@ func main() {
 
 	done := make(chan bool, 1)
 
-	go start()
+	go start(username, password, sfpHost)
 
 	<-done
 }
 
-func start() {
+func start(username, pwd, sfpHost string) {
 	for {
-		login()
+		login(username, pwd, sfpHost)
 
-		getStat()
+		getStat(sfpHost)
 	}
 }
 
-func login() {
-	url := "http://192.168.1.1/boaform/admin/formLogin"
+func login(username, pwd, sfpHost string) {
+	url := fmt.Sprintf("http://%s/boaform/admin/formLogin", sfpHost)
 	method := "POST"
 
-	payload := strings.NewReader("challenge=&username=admin&password=admin&save=Login&submit-url=%2Fadmin%2Flogin.asp")
+	payload := strings.NewReader(fmt.Sprintf("challenge=&username=%s&password=%s&save=Login&submit-url=/admin/login.asp", username, pwd))
 
 	rClient := &http.Client{}
 	req, err := http.NewRequest(method, url, payload)
@@ -80,9 +109,9 @@ func login() {
 	fmt.Println(string(body))
 }
 
-func getStat() {
+func getStat(sfpHost string) {
 
-	url := "http://192.168.1.1/status_pon.asp"
+	url := fmt.Sprintf("http://%s/status_pon.asp", sfpHost)
 	method := "GET"
 
 	rsClient := &http.Client{}
@@ -98,7 +127,7 @@ func getStat() {
 	req.Header.Add("Accept-Encoding", "gzip, deflate")
 	req.Header.Add("DNT", "1")
 	req.Header.Add("Connection", "keep-alive")
-	req.Header.Add("Referer", "http://192.168.1.1/left.html")
+	req.Header.Add("Referer", fmt.Sprintf("http://%s/left.html", sfpHost))
 	req.Header.Add("Upgrade-Insecure-Requests", "1")
 	req.Header.Add("Priority", "u=4")
 	req.Header.Add("Pragma", "no-cache")
@@ -170,14 +199,6 @@ func parseHTML(htmlContent string) {
 	}
 
 	PushData(toExport, tm)
-
-	//fmt.Println("Temperature:", extractValue("Temperature"))
-	//fmt.Println("Voltage:", extractValue("Voltage"))
-	//fmt.Println("Tx Power:", extractValue("Tx Power"))
-	//fmt.Println("Rx Power:", extractValue("Rx Power"))
-	//fmt.Println("Bias Current:", extractValue("Bias Current"))
-	//fmt.Println("ONU State:", extractValue("ONU State"))
-	//fmt.Println("Registered Status:", extractValue("Registered Status"))
 }
 
 func extractNumber(input string) *float64 {
@@ -208,5 +229,4 @@ func PushData(data map[string]any, tm time.Time) {
 	if err := writeAPI.WritePoint(context.Background(), p); err != nil {
 		log.Printf("Error writing point to InfluxDB: %v", err)
 	}
-
 }
